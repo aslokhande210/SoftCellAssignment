@@ -1,0 +1,43 @@
+# --table-start--
+dataClass=com.softcell.assignment.model.User
+tableName=user
+# --table-fields-start--
+# --field-start--
+fieldName=firstName
+columnName=firstName
+# --field-end--
+# --field-start--
+fieldName=lastName
+columnName=lastName
+# --field-end--
+# --field-start--
+fieldName=email
+columnName=email
+# --field-end--
+# --field-start--
+fieldName=loanAmount
+columnName=loanAmount
+# --field-end--
+# --field-start--
+fieldName=panCardNumber
+columnName=panCardNumber
+# --field-end--
+# --field-start--
+fieldName=aadhaarCardNumber
+columnName=aadhaarCardNumber
+# --field-end--
+# --field-start--
+fieldName=voterIdNumber
+columnName=voterIdNumber
+# --field-end--
+# --field-start--
+fieldName=latitude
+columnName=latitude
+# --field-end--
+# --field-start--
+fieldName=longitude
+columnName=longitude
+# --field-end--
+# --table-fields-end--
+# --table-end--
+#################################

@@ -1,0 +1,24 @@
+<resources>
+    <string name="app_name">Assignment</string>
+    <string name="username">Username</string>
+    <string name="password">Password</string>
+    <string name="login">Login</string>
+    <string name="forgot_your_password">Forgot your password?</string>
+    <string name="login_successful">Login successful</string>
+    <string name="enter_valid_email">Please enter valid email</string>
+    <string name="password_cannot_be_empty">Password cannot be empty</string>
+    <string name="logging_in">Logging in</string>
+    <string name="users">Users</string>
+    <string name="first_name">First name</string>
+    <string name="last_name">Last name</string>
+    <string name="email">Email</string>
+    <string name="loan_amount">Loan amount</string>
+    <string name="pan_number">PAN card number</string>
+    <string name="aadhaar_card_number">Aadhaar card number</string>
+    <string name="voter_id">Voter ID</string>
+    <string name="add_applicant">Add applicant</string>
+    <string name="enter_valid_pan_card_number">Please enter a valid PAN card number</string>
+    <string name="enter_valid_aadhaar_card_number">Please enter a valid Aadhaar card number</string>
+    <string name="enter_valid_voter_card_number">Please enter a valid Voter ID</string>
+    <string name="enter_loan_amount">Loan amount must be between 1 to 100000</string>
+</resources>
