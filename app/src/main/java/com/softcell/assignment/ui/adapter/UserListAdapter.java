@@ -73,11 +73,11 @@ public class UserListAdapter extends RecyclerView.Adapter<UserListAdapter.UserVi
                 list = geocoder.getFromLocation(lat, lng, 2);
 
                 Address address = list.get(0);
-                strAddress = ("Name: " + address.getLocality() + "\n") +
-                        "Sub - Admin Ares: " + address.getSubAdminArea() + "\n" +
-                        "Admin Area: " + address.getAdminArea() + "\n" +
-                        "Country: " + address.getCountryName() + "\n" +
-                        "Country Code: " + address.getCountryCode() + "\n";
+                strAddress = address.getAddressLine(address.getMaxAddressLineIndex()) + " " +
+                        address.getLocality() + " " +
+                        address.getAdminArea() + " " +
+                        address.getCountryName() + " " +
+                        address.getCountryCode() + " ";
             } catch (Exception e) {
                 e.printStackTrace();
             }

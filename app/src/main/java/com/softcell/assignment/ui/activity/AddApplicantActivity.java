@@ -1,17 +1,32 @@
 package com.softcell.assignment.ui.activity;
 
 import android.Manifest;
-import android.content.pm.PackageManager;
+import android.annotation.SuppressLint;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentSender;
+import android.location.Criteria;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.text.InputFilter;
 import android.text.TextUtils;
+import android.util.Log;
 import android.util.Patterns;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
-import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.PendingResult;
+import com.google.android.gms.common.api.Status;
+import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.LocationSettingsRequest;
+import com.google.android.gms.location.LocationSettingsResult;
+import com.google.android.gms.location.LocationSettingsStatusCodes;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.softcell.assignment.R;
@@ -24,17 +39,18 @@ import com.softcell.assignment.utils.CustomRangeFilter;
 import com.softcell.assignment.utils.Regex;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
 import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
+import androidx.annotation.Nullable;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 import pub.devrel.easypermissions.EasyPermissions;
 
-public class AddApplicantActivity extends BaseActivity implements AddApplicantView {
+public class AddApplicantActivity extends BaseActivity implements AddApplicantView, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, EasyPermissions.PermissionCallbacks {
 
     @BindView(R.id.first_name)
     TextInputEditText firstName;
@@ -69,8 +85,14 @@ public class AddApplicantActivity extends BaseActivity implements AddApplicantVi
     @BindView(R.id.add_applicant)
     Button addApplicant;
 
-    private double lat, lng;
+    private Location bestLocation = null;
     private ApplicantPresenter applicantPresenter;
+    private GoogleApiClient googleApiClient;
+
+    private interface LocationRequestCodes {
+        int LOCATION_PERMISSION = 1;
+        int ENABLE_LOCATION = 2;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,21 +101,48 @@ public class AddApplicantActivity extends BaseActivity implements AddApplicantVi
         ButterKnife.bind(this);
         applicantPresenter = new ApplicantPresenter(this, this);
         loanAmount.setFilters(new InputFilter[]{new CustomRangeFilter(1, 100000)});
+        validatePermissions();
+    }
+
+    private void validatePermissions() {
+        //Check location permissions
+        if (!EasyPermissions.hasPermissions(this, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) {
+            EasyPermissions.requestPermissions(this, "Please allow app to use location permissions", LocationRequestCodes.LOCATION_PERMISSION, Manifest.permission.ACCESS_FINE_LOCATION);
+        } else {
+            showLocationDialog();
+        }
     }
 
     @OnClick(R.id.add_applicant)
     public void onViewClicked() {
-        if (formValid()) {
-            submitForm();
-        }
+        submitForm();
     }
 
 
     private void submitForm() {
-        if (EasyPermissions.hasPermissions(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
-            getLtLng();
+        if (!formValid()) {
+            Toast.makeText(AddApplicantActivity.this, "Please fill the form with valid values", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (bestLocation == null) {
+            Toast.makeText(AddApplicantActivity.this, "Location not available", Toast.LENGTH_SHORT).show();
+            validatePermissions();
         } else {
-            EasyPermissions.requestPermissions(this, "", 1, Manifest.permission.ACCESS_FINE_LOCATION);
+            User user = new User();
+
+            user.setFirstName(Objects.requireNonNull(firstName.getText()).toString());
+            user.setLastName(Objects.requireNonNull(lastName.getText()).toString());
+            user.setEmail(Objects.requireNonNull(email.getText()).toString());
+            user.setLoanAmount(Integer.parseInt(String.valueOf(loanAmount.getText())));
+            user.setPanCardNumber(Objects.requireNonNull(panNumber.getText()).toString());
+            user.setAadhaarCardNumber(Objects.requireNonNull(aadhaarNumber.getText()).toString());
+            user.setVoterIdNumber(Objects.requireNonNull(voterId.getText()).toString());
+
+            user.setLatitude(bestLocation.getLatitude());
+            user.setLongitude(bestLocation.getLongitude());
+
+            applicantPresenter.addApplicant(user);
         }
 
 
@@ -102,8 +151,15 @@ public class AddApplicantActivity extends BaseActivity implements AddApplicantVi
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        onViewClicked();
+        EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == LocationRequestCodes.ENABLE_LOCATION && resultCode == RESULT_OK) {
+            getLtLng();
+        }
     }
 
     private boolean formValid() {
@@ -195,31 +251,76 @@ public class AddApplicantActivity extends BaseActivity implements AddApplicantVi
         voterIdLayout.setErrorEnabled(false);
     }
 
+    @SuppressLint("MissingPermission")
     private void getLtLng() {
-        FusedLocationProviderClient fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        locationManager.requestLocationUpdates(locationManager.getBestProvider(new Criteria(), true), 1000, 10, new LocationListener() {
+            @Override
+            public void onLocationChanged(Location location) {
+                if (bestLocation == null && location != null) {
+                    bestLocation = location;
+                }
+            }
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(this, "Please provide location permission", Toast.LENGTH_LONG).show();
-            return;
+            @Override
+            public void onStatusChanged(String provider, int status, Bundle extras) {
+
+            }
+
+            @Override
+            public void onProviderEnabled(String provider) {
+
+            }
+
+            @Override
+            public void onProviderDisabled(String provider) {
+
+            }
+        });
+    }
+
+    private void showLocationDialog() {
+        if (googleApiClient == null) {
+            googleApiClient = new GoogleApiClient.Builder(this)
+                    .addApi(LocationServices.API)
+                    .addConnectionCallbacks(this)
+                    .addOnConnectionFailedListener(this).build();
         }
-        fusedLocationProviderClient.getLastLocation().addOnSuccessListener(AddApplicantActivity.this, location -> {
-            lat = location.getLatitude();
-            lng = location.getLongitude();
+        googleApiClient.connect();
 
-            User user = new User();
+        LocationRequest locationRequest = LocationRequest.create();
+        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        locationRequest.setInterval(3 * 1000);
+        locationRequest.setFastestInterval(5 * 1000);
+        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder()
+                .addLocationRequest(locationRequest);
 
-            user.setFirstName(Objects.requireNonNull(firstName.getText()).toString());
-            user.setLastName(Objects.requireNonNull(lastName.getText()).toString());
-            user.setEmail(Objects.requireNonNull(email.getText()).toString());
-            user.setLoanAmount(Integer.parseInt(String.valueOf(loanAmount.getText())));
-            user.setPanCardNumber(Objects.requireNonNull(panNumber.getText()).toString());
-            user.setAadhaarCardNumber(Objects.requireNonNull(aadhaarNumber.getText()).toString());
-            user.setVoterIdNumber(Objects.requireNonNull(voterId.getText()).toString());
+        builder.setAlwaysShow(true);
 
-            user.setLatitude(lat);
-            user.setLongitude(lng);
-
-            applicantPresenter.addApplicant(user);
+        PendingResult<LocationSettingsResult> result =
+                LocationServices.SettingsApi.checkLocationSettings(googleApiClient, builder.build());
+        result.setResultCallback(result1 -> {
+            final Status status = result1.getStatus();
+            switch (status.getStatusCode()) {
+                case LocationSettingsStatusCodes.SUCCESS:
+                    getLtLng();
+                    break;
+                case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
+                    try {
+                        // Show the dialog by calling startResolutionForResult(),
+                        // and check the result in onActivityResult().
+                        status.startResolutionForResult(
+                                this, LocationRequestCodes.ENABLE_LOCATION);
+                    } catch (IntentSender.SendIntentException e) {
+                        // Ignore the error.
+                    }
+                    break;
+                case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
+                    // Location settings are not satisfied. However, we have no way to fix the
+                    // settings so we won't show the dialog.
+                    Toast.makeText(AddApplicantActivity.this, "Please enable location the app to work", Toast.LENGTH_SHORT).show();
+                    break;
+            }
         });
     }
 
@@ -274,5 +375,30 @@ public class AddApplicantActivity extends BaseActivity implements AddApplicantVi
     @Override
     public void failed(NetworkError error) {
 
+    }
+
+    @Override
+    public void onConnected(@Nullable Bundle bundle) {
+        Log.d("", "Google API Client connected");
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+        Log.d("", "Google API Client suspended");
+    }
+
+    @Override
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+        Log.d("", "Google API Client connection failed");
+    }
+
+    @Override
+    public void onPermissionsGranted(int requestCode, @NonNull List<String> perms) {
+        showLocationDialog();
+    }
+
+    @Override
+    public void onPermissionsDenied(int requestCode, @NonNull List<String> perms) {
+        Toast.makeText(AddApplicantActivity.this, "Please enable location the app to work", Toast.LENGTH_SHORT).show();
     }
 }
