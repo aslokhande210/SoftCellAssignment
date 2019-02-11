@@ -48,7 +48,6 @@
                     android:id="@+id/username"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="peter@vklen"
                     android:hint="@string/username"
                     android:inputType="textEmailAddress"
                     tools:ignore="HardcodedText" />
@@ -67,7 +66,6 @@
                     android:id="@+id/password"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="cityslicka"
                     android:hint="@string/password"
                     android:inputType="textPassword"
                     tools:ignore="HardcodedText" />

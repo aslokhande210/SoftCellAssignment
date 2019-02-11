@@ -29,7 +29,6 @@
                     android:id="@+id/first_name"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Sample1"
                     android:hint="@string/first_name"
                     android:inputType="textPersonName"
                     tools:ignore="HardcodedText" />
@@ -47,7 +46,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="@string/last_name"
-                    android:text="Sample2"
                     android:inputType="textPersonName"
                     tools:ignore="HardcodedText" />
             </com.google.android.material.textfield.TextInputLayout>
@@ -63,7 +61,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="@string/email"
-                    android:text="text@gmail.com"
                     android:inputType="textEmailAddress"
                     tools:ignore="HardcodedText" />
             </com.google.android.material.textfield.TextInputLayout>
@@ -80,7 +77,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="@string/loan_amount"
-                    android:text="78000"
                     android:inputType="number"
                     tools:ignore="HardcodedText" />
             </com.google.android.material.textfield.TextInputLayout>
@@ -97,7 +93,6 @@
                     android:layout_height="wrap_content"
                     android:hint="@string/pan_number"
                     android:textAllCaps="true"
-                    android:text="ABCDE0123A"
                     android:inputType="textCapCharacters"
                     tools:ignore="HardcodedText" />
             </com.google.android.material.textfield.TextInputLayout>
